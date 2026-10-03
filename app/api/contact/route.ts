@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateEnquiry, type Enquiry } from "@/lib/contact";
+import nodemailer from "nodemailer";
 
 export async function POST(req: Request) {
   let body: Partial<Enquiry>;
@@ -19,8 +20,36 @@ export async function POST(req: Request) {
   const errors = validateEnquiry(data);
   if (Object.keys(errors).length) return NextResponse.json({ ok: false, errors }, { status: 422 });
 
-  // TODO(integration): deliver via a server-side provider (e.g. Resend) using env vars —
-  // never expose keys client-side.
-  console.info("[contact] enquiry", { email: data.email, projectType: data.projectType });
-  return NextResponse.json({ ok: true });
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: "sanjulathilan12321@gmail.com",
+      subject: `New Contact Enquiry from ${data.name}`,
+      text: `
+Name: ${data.name}
+Email: ${data.email}
+Company: ${data.company}
+Project Type: ${data.projectType}
+Budget: ${data.budget}
+
+Message:
+${data.message}
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.info("[contact] enquiry sent via email", { email: data.email, projectType: data.projectType });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("[contact] email error:", error);
+    return NextResponse.json({ ok: false, error: "Failed to send email." }, { status: 500 });
+  }
 }

@@ -9,9 +9,8 @@ export const site = {
   email: "info@novalinkinnovations.com",
   phone: "+61 450 679 814",
   phoneHref: "tel:+61450679814",
-  phoneLk: "+94 76 006 8914",
   phoneLkHref: "tel:+94760068914",
-  locations: ["Melbourne, Australia", "Sri Lanka"],
+  locations: ["Australia", "Sri Lanka"],
   /** Profiles linked from the current novalinkinnovations.com. */
   socials: [
     { label: "LinkedIn", href: "https://www.linkedin.com/company/novalink-innovations" },

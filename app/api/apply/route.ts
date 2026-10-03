@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateApplication, type Application } from "@/lib/contact";
+import nodemailer from "nodemailer";
 
 export async function POST(req: Request) {
   let form: FormData;
@@ -22,7 +23,47 @@ export async function POST(req: Request) {
   const errors = validateApplication(data, file ? { type: file.type, size: file.size } : null);
   if (Object.keys(errors).length) return NextResponse.json({ ok: false, errors }, { status: 422 });
 
-  // TODO(integration): forward the application + CV to the hiring inbox / ATS server-side.
-  console.info("[apply] application", { email: data.email, position: data.position, cv: file?.name });
-  return NextResponse.json({ ok: true });
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions: any = {
+      from: process.env.EMAIL_USER,
+      to: "sanjulathilan12321@gmail.com",
+      subject: `New Job Application from ${data.name} for ${data.position}`,
+      text: `
+Name: ${data.name}
+Email: ${data.email}
+Phone: ${data.phone}
+Position: ${data.position}
+Portfolio/LinkedIn: ${data.portfolio}
+
+Cover Letter:
+${data.coverLetter}
+      `,
+    };
+
+    if (file) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      mailOptions.attachments = [
+        {
+          filename: file.name,
+          content: buffer,
+          contentType: file.type,
+        },
+      ];
+    }
+
+    await transporter.sendMail(mailOptions);
+    console.info("[apply] application sent via email", { email: data.email, position: data.position, cv: file?.name });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("[apply] email error:", error);
+    return NextResponse.json({ ok: false, error: "Failed to send email." }, { status: 500 });
+  }
 }
